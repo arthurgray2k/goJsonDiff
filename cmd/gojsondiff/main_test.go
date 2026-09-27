@@ -46,6 +46,36 @@ func TestRun_DifferentFiles(t *testing.T) {
 	}
 }
 
+func TestRun_TypeAndInlineFlags(t *testing.T) {
+	tmpDir := t.TempDir()
+	f1 := filepath.Join(tmpDir, "a.json")
+	f2 := filepath.Join(tmpDir, "b.json")
+
+	_ = os.WriteFile(f1, []byte(`{"user": {"name": "Atur", "age": 40}}`), 0644)
+	_ = os.WriteFile(f2, []byte(`{"user": {"name": "Atur", "age": "41"}}`), 0644)
+
+	// Test -type
+	var stdout, stderr bytes.Buffer
+	exitCode := run([]string{"-type", f1, f2}, &stdout, &stderr)
+	if exitCode != 1 {
+		t.Fatalf("expected exit code 1, got %d", exitCode)
+	}
+	if !strings.Contains(stdout.String(), "type: number → string") {
+		t.Errorf("expected type diff in output: %s", stdout.String())
+	}
+
+	// Test -inline
+	stdout.Reset()
+	stderr.Reset()
+	exitCode = run([]string{"-inline", f1, f2}, &stdout, &stderr)
+	if exitCode != 1 {
+		t.Fatalf("expected exit code 1, got %d", exitCode)
+	}
+	if !strings.Contains(stdout.String(), "user") || !strings.Contains(stdout.String(), "├── ") {
+		t.Errorf("expected tree structure in -inline output: %s", stdout.String())
+	}
+}
+
 func TestRun_ColorFlags(t *testing.T) {
 	tmpDir := t.TempDir()
 	f1 := filepath.Join(tmpDir, "a.json")

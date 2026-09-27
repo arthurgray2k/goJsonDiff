@@ -23,13 +23,15 @@ func run(args []string, stdout, stderr io.Writer) int {
 		colorFlag   = fs.String("color", "auto", "Enable colorized output: auto, always, never")
 		formatFlag  = fs.String("format", "text", "Output format: text, json")
 		summaryFlag = fs.Bool("summary", true, "Include aggregate changes summary in text output")
+		typeFlag    = fs.Bool("type", false, "Show type mutation details in diff output")
+		inlineFlag  = fs.Bool("inline", false, "Render diff in hierarchical tree/inline format")
 		versionFlag = fs.Bool("version", false, "Print version information")
 		vFlag       = fs.Bool("v", false, "Print version information (shorthand)")
 	)
 
 	fs.Usage = func() {
 		fmt.Fprintf(stderr, "Usage: gojsondiff [options] <fileA.json> <fileB.json>\n\n")
-		fmt.Fprintf(stderr, "A structural JSON diff tool that compares JSON documents based on data,\n")
+		fmt.Fprintf(stderr, "A high-performance structural JSON diff tool that compares JSON documents based on data,\n")
 		fmt.Fprintf(stderr, "ignoring irrelevant formatting, key order, and indentation.\n\n")
 		fmt.Fprintf(stderr, "Arguments:\n")
 		fmt.Fprintf(stderr, "  <fileA.json>   Path to original JSON document (or '-' for stdin)\n")
@@ -100,9 +102,11 @@ func run(args []string, stdout, stderr io.Writer) int {
 
 	switch *formatFlag {
 	case "text":
-		out := jsondiff.FormatText(result, jsondiff.FormatOptions{
+		out := jsondiff.Format(result, jsondiff.FormatOptions{
 			Colorize:    colorize,
 			ShowSummary: *summaryFlag,
+			ShowTypes:   *typeFlag,
+			Inline:      *inlineFlag,
 		})
 		fmt.Fprint(stdout, out)
 

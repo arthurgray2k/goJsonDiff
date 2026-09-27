@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
+	"strings"
 )
 
 // DiffKind represents the classification of a difference between two JSON nodes.
@@ -16,6 +17,7 @@ const (
 	KindRemoved     DiffKind = "removed"
 	KindModified    DiffKind = "modified"
 	KindTypeChanged DiffKind = "type_changed"
+	KindUnchanged   DiffKind = "unchanged"
 )
 
 // Difference describes a single change detected between two JSON structures.
@@ -42,11 +44,13 @@ type DiffResult struct {
 	Equal       bool         `json:"equal"`
 	Differences []Difference `json:"differences"`
 	Summary     DiffSummary  `json:"summary"`
+	Original    any          `json:"-"`
+	Modified    any          `json:"-"`
 }
 
 // Options configures the diff engine behavior.
 type Options struct {
-	// RootPath overrides the default root path "$" if specified.
+	// RootPath overrides the root path if specified. Defaults to "".
 	RootPath string
 }
 
@@ -55,8 +59,8 @@ var identRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 // Compare structurally compares two JSON documents (already parsed into any)
 // and returns the differences and a summary.
 func Compare(a, b any, opts ...Options) *DiffResult {
-	opt := Options{RootPath: "$"}
-	if len(opts) > 0 && opts[0].RootPath != "" {
+	opt := Options{RootPath: ""}
+	if len(opts) > 0 {
 		opt.RootPath = opts[0].RootPath
 	}
 
@@ -83,6 +87,8 @@ func Compare(a, b any, opts ...Options) *DiffResult {
 		Equal:       len(diffs) == 0,
 		Differences: diffs,
 		Summary:     summary,
+		Original:    a,
+		Modified:    b,
 	}
 }
 
@@ -149,7 +155,6 @@ func diffRecursive(path string, a, b any, diffs *[]Difference) {
 }
 
 func diffObjects(path string, a, b map[string]any, diffs *[]Difference) {
-	// Gather and sort all unique keys
 	allKeys := make(map[string]struct{})
 	for k := range a {
 		allKeys[k] = struct{}{}
@@ -199,13 +204,13 @@ func diffArrays(path string, a, b []any, diffs *[]Difference) {
 
 	// Compare overlapping elements
 	for i := 0; i < minLen; i++ {
-		elemPath := fmt.Sprintf("%s[%d]", path, i)
+		elemPath := appendArrayPath(path, i)
 		diffRecursive(elemPath, a[i], b[i], diffs)
 	}
 
 	// Extra elements in B (Added)
 	for i := minLen; i < lenB; i++ {
-		elemPath := fmt.Sprintf("%s[%d]", path, i)
+		elemPath := appendArrayPath(path, i)
 		*diffs = append(*diffs, Difference{
 			Path:     elemPath,
 			Kind:     KindAdded,
@@ -216,7 +221,7 @@ func diffArrays(path string, a, b []any, diffs *[]Difference) {
 
 	// Missing elements from A (Removed)
 	for i := minLen; i < lenA; i++ {
-		elemPath := fmt.Sprintf("%s[%d]", path, i)
+		elemPath := appendArrayPath(path, i)
 		*diffs = append(*diffs, Difference{
 			Path:     elemPath,
 			Kind:     KindRemoved,
@@ -265,13 +270,25 @@ func toNumeric(v any) (float64, bool) {
 }
 
 func appendObjectPath(base, key string) string {
+	var part string
 	if identRegex.MatchString(key) {
-		if base == "$" {
-			return "$." + key
-		}
-		return base + "." + key
+		part = key
+	} else {
+		part = fmt.Sprintf("[%q]", key)
 	}
-	// Escape quotes inside key
-	escaped := fmt.Sprintf("%q", key)
-	return fmt.Sprintf("%s[%s]", base, escaped)
+
+	if base == "" {
+		return part
+	}
+	if strings.HasPrefix(part, "[") {
+		return base + part
+	}
+	return base + "." + part
+}
+
+func appendArrayPath(base string, idx int) string {
+	if base == "" {
+		return fmt.Sprintf("[%d]", idx)
+	}
+	return fmt.Sprintf("%s[%d]", base, idx)
 }

@@ -22,6 +22,8 @@ gojsondiff [options] <fileA.json> <fileB.json>
 
 | Flag | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
+| `-type` | `bool` | `false` | Display data type mutations (e.g. `~ type: number → string`). |
+| `-inline` | `bool` | `false` | Render output as an ASCII hierarchical tree view with change indicators. |
 | `-color` | `string` | `auto` | Terminal coloring: `auto` (detects TTY), `always`, or `never`. |
 | `-format` | `string` | `text` | Diff output formatting: `text` (human-readable) or `json`. |
 | `-summary` | `bool` | `true` | Show or omit aggregate change statistics in text output. |
@@ -42,24 +44,105 @@ gojsondiff [options] <fileA.json> <fileB.json>
 
 ## Practical Examples
 
-### 1. Basic Comparison of Local Files
+### 1. Default Structural Diff
 ```bash
-gojsondiff config.dev.json config.prod.json
+gojsondiff original.json modified.json
 ```
 
 **Output:**
-```diff
-- $.debug: true
-~ $.host: "localhost" -> "prod.internal"
-* $.port: 3000 (number) -> "3000" (string)
-+ $.ssl: true
+```
+JSON DIFF
+  age
+    - 40
+    + 41
+  city
+    - "Delhi"
+  country
+    + "India"
 
-Summary: 4 total changes (1 added, 1 removed, 1 modified, 1 type changed)
+Summary: 3 total changes (1 added, 1 removed, 1 modified, 0 type changed)
 ```
 
 ---
 
-### 2. Reading from Stdin (Pipes & Subshells)
+### 2. Nested Objects & Array Diff
+For nested objects and array elements, `gojsondiff` pinpoints exact paths:
+
+```bash
+gojsondiff old_users.json new_users.json
+```
+
+**Output:**
+```
+JSON DIFF
+  users[1].name
+    - "B"
+    + "Bob"
+  users[2]
+    + {
+      "id": 3,
+      "name": "C"
+    }
+
+Summary: 2 total changes (1 added, 0 removed, 1 modified, 0 type changed)
+```
+
+---
+
+### 3. Type Mutation Tracking (`-type`)
+Track when types change between documents (especially useful for API schema changes):
+
+```bash
+gojsondiff -type old_api.json new_api.json
+```
+
+**Output:**
+```
+JSON DIFF
+  age
+    ~ type: number → string
+    - 40
+    + "40"
+  enabled
+    ~ type: boolean → null
+    - true
+    + null
+```
+
+---
+
+### 4. Hierarchical Tree / Inline View (`-inline`)
+Visualize changes across large, deeply nested JSON documents in an ASCII tree:
+
+```bash
+gojsondiff -inline old_profile.json new_profile.json
+```
+
+**Output:**
+```
+JSON DIFF
+user
+├── name
+│   └── = "Atur"
+├── age
+│   └── ~ 40 → 41
+├── address
+│   ├── city
+│   │   └── ~ "Delhi" → "Noida"
+│   └── zip
+│       └── - "110001"
+└── email
+    └── + "atur@example.com"
+```
+Where:
+- `+` Field added
+- `-` Field removed
+- `~` Value or type changed
+- `=` Unchanged sibling in modified parent
+
+---
+
+### 5. Reading from Stdin (Pipes & Subshells)
 
 Comparing a local file against an API response:
 ```bash
@@ -73,7 +156,7 @@ gojsondiff <(curl -s https://api.prod/v1/user/1) <(curl -s https://api.staging/v
 
 ---
 
-### 3. Machine-Readable JSON Output
+### 6. Machine-Readable JSON Output
 
 Emit full change metadata in JSON format for parsing with `jq` or feeding into automated downstream tools:
 
@@ -81,33 +164,9 @@ Emit full change metadata in JSON format for parsing with `jq` or feeding into a
 gojsondiff -format json old.json new.json
 ```
 
-**Output:**
-```json
-{
-  "equal": false,
-  "differences": [
-    {
-      "path": "$.rate_limit",
-      "kind": "modified",
-      "old_value": 1000,
-      "new_value": 5000,
-      "old_type": "number",
-      "new_type": "number"
-    }
-  ],
-  "summary": {
-    "total_changes": 1,
-    "added": 0,
-    "removed": 0,
-    "modified": 1,
-    "type_changed": 0
-  }
-}
-```
-
 ---
 
-### 4. CI/CD Integration
+### 7. CI/CD Integration
 
 Fail a GitHub Actions or GitLab pipeline if an API response deviates from its schema/fixture:
 
@@ -127,18 +186,4 @@ else
   echo "Error running diff."
   exit 2
 fi
-```
-
----
-
-### 5. Color Highlighting Control
-
-Force colorization when piping to a pager (like `less -R`):
-```bash
-gojsondiff -color always docA.json docB.json | less -R
-```
-
-Disable colorization explicitly for log files:
-```bash
-gojsondiff -color never docA.json docB.json > diff.log
 ```

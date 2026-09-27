@@ -110,6 +110,40 @@ func TestCompare_Arrays(t *testing.T) {
 	}
 }
 
+func TestCompare_ArrayStructuralUsers(t *testing.T) {
+	// From GOJSONDIFF-3 specification
+	jsonA := `{
+	  "users": [
+		{"id": 1, "name": "A"},
+		{"id": 2, "name": "B"}
+	  ]
+	}`
+	jsonB := `{
+	  "users": [
+		{"id": 1, "name": "A"},
+		{"id": 2, "name": "Bob"},
+		{"id": 3, "name": "C"}
+	  ]
+	}`
+
+	res := Compare(parse(t, jsonA), parse(t, jsonB))
+	if res.Equal {
+		t.Fatalf("expected documents to differ")
+	}
+
+	paths := make(map[string]DiffKind)
+	for _, d := range res.Differences {
+		paths[d.Path] = d.Kind
+	}
+
+	if paths["users[1].name"] != KindModified {
+		t.Errorf("expected users[1].name to be modified, got %v", paths["users[1].name"])
+	}
+	if paths["users[2]"] != KindAdded {
+		t.Errorf("expected users[2] to be added, got %v", paths["users[2]"])
+	}
+}
+
 func TestCompare_ArrayTruncation(t *testing.T) {
 	jsonA := `[1, 2, 3, 4]`
 	jsonB := `[1, 2]`
@@ -133,8 +167,8 @@ func TestCompare_SpecialKeyNames(t *testing.T) {
 	}
 
 	expectedPaths := map[string]bool{
-		`$["key-with-dashes"]`: false,
-		`$["key with spaces"]`: false,
+		`["key-with-dashes"]`: false,
+		`["key with spaces"]`: false,
 	}
 	for _, d := range res.Differences {
 		if _, ok := expectedPaths[d.Path]; ok {
@@ -149,7 +183,6 @@ func TestCompare_SpecialKeyNames(t *testing.T) {
 }
 
 func TestCompare_Numbers(t *testing.T) {
-	// Comparing json.Number representation with int/float
 	var a, b any
 	_ = json.Unmarshal([]byte(`{"n": 42}`), &a)
 	_ = json.Unmarshal([]byte(`{"n": 42.0}`), &b)
