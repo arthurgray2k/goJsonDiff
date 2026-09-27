@@ -187,3 +187,14 @@ else
   exit 2
 fi
 ```
+
+---
+
+## Sample Diff Files (GOJSONDIFF-6)
+
+Pre-generated reference diff files demonstrating each output mode are located in [`examples/`](file:///home/mint/golang_toolshed/goJsonDiff/examples/):
+
+- [`examples/sample_structural_diff.txt`](file:///home/mint/golang_toolshed/goJsonDiff/examples/sample_structural_diff.txt): Default structural format with `JSON DIFF` header, path indicators, and summary.
+- [`examples/sample_type_diff.txt`](file:///home/mint/golang_toolshed/goJsonDiff/examples/sample_type_diff.txt): Type mutation format using `-type`.
+- [`examples/sample_inline_tree_diff.txt`](file:///home/mint/golang_toolshed/goJsonDiff/examples/sample_inline_tree_diff.txt): Hierarchical tree representation using `-inline`.
+- [`examples/sample_diff.diff`](file:///home/mint/golang_toolshed/goJsonDiff/examples/sample_diff.diff): Diff output formatted with `.diff` extension for diff viewers.

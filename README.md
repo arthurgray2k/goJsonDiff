@@ -132,12 +132,82 @@ goJsonDiff/
 │       └── loader_test.go       # Loader unit tests
 ├── examples/
 │   ├── original.json            # Sample baseline document
-│   └── modified.json            # Sample updated document
+│   ├── modified.json            # Sample updated document
+│   ├── sample_structural_diff.txt # Sample default structural diff output
+│   ├── sample_type_diff.txt     # Sample type mutation diff output (-type)
+│   ├── sample_inline_tree_diff.txt # Sample hierarchical tree diff output (-inline)
+│   └── sample_diff.diff         # Sample diff format file
 ├── go.mod                       # Go 1.26 module definition
 ├── Makefile                     # Build and testing targets
 ├── README.md                    # Project documentation
 ├── USAGE.md                     # Comprehensive CLI usage guide
 └── LICENSE                      # Mozilla Public License 2.0
+```
+
+---
+
+## Architecture & Workflow
+
+### Architecture Component Flow
+
+```mermaid
+graph TD
+    CLI["CLI Entry Point (cmd/gojsondiff)"] --> Loader["JSON Loader & Parser (internal/jsondiff/loader.go)"]
+    Loader --> InputA["Document A (File / Stdin)"]
+    Loader --> InputB["Document B (File / Stdin)"]
+    InputA --> DiffEngine["Recursive Diff Engine (internal/jsondiff/diff.go)"]
+    InputB --> DiffEngine
+
+    subgraph CoreEngine ["Diff Engine Traversal"]
+        DiffEngine --> DetectType["Type Detection & Mutation"]
+        DiffEngine --> DiffObj["Object Recursive Diff"]
+        DiffEngine --> DiffArr["Array Structural Diff"]
+        DiffEngine --> DiffScalar["Scalar & Numeric Comparison"]
+    end
+
+    DetectType --> DiffResult["DiffResult (Differences + Summary)"]
+    DiffObj --> DiffResult
+    DiffArr --> DiffResult
+    DiffScalar --> DiffResult
+
+    DiffResult --> FormatDefault["Default Structural Formatter"]
+    DiffResult --> FormatType["Type-Aware Formatter (-type)"]
+    DiffResult --> FormatTree["Hierarchical Tree Formatter (-inline)"]
+    DiffResult --> FormatJSON["JSON Formatter (-format json)"]
+
+    FormatDefault --> Output["Stdout / Terminal / Pipeline"]
+    FormatType --> Output
+    FormatTree --> Output
+    FormatJSON --> Output
+```
+
+### Runtime Execution Workflow
+
+```mermaid
+flowchart TD
+    Start(["Start (gojsondiff args)"]) --> ValidateArgs{"Validate Arguments"}
+    ValidateArgs -- Invalid --> ShowHelp["Print Usage & Exit(2)"]
+    ValidateArgs -- Valid --> LoadDocs["Load JSON Documents (UseNumber)"]
+
+    LoadDocs -- JSON Error --> ExitErr["Print Parse Error & Exit(2)"]
+    LoadDocs -- Success --> RunCompare["Run jsondiff.Compare(docA, docB)"]
+
+    RunCompare --> TraverseAST["Recursive AST Walk (Object / Array / Scalar)"]
+    TraverseAST --> CollectDiffs["Aggregate Differences & Summary Stats"]
+
+    CollectDiffs --> SelectFormat{"Format Flag?"}
+    SelectFormat -- text default --> FmtDefault["Render Default Structural Diff"]
+    SelectFormat -- -type --> FmtType["Render Type Mutation Diff"]
+    SelectFormat -- -inline --> FmtTree["Render ASCII Hierarchical Tree"]
+    SelectFormat -- json --> FmtJSON["Render Structured JSON"]
+
+    FmtDefault --> CheckEqual{"Differences Found?"}
+    FmtType --> CheckEqual
+    FmtTree --> CheckEqual
+    FmtJSON --> CheckEqual
+
+    CheckEqual -- Yes --> Exit1["Output Diff & Exit(1)"]
+    CheckEqual -- No --> Exit0["Output 'No differences found' & Exit(0)"]
 ```
 
 ---

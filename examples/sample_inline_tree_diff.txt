@@ -1,0 +1,15 @@
+JSON DIFF
+├── deprecated_field
+│   └── - "legacy"
+├── enabled
+│   └── = true
+├── endpoints
+│   └── ~ [{"auth_required":false,"method":"GET","path":"/api/v1/health"},{"auth_required":true,"method":"GET","path":"/api/v1/users"}] → [{"auth_required":false,"method":"GET","path":"/api/v1/health"},{"auth_required":"yes","method":"GET","path":"/api/v1/users"},{"auth_required":true,"method":"GET","path":"/api/v2/metrics"}]
+├── name
+│   └── = "ServiceGateway"
+├── rate_limit
+│   └── ~ 1000 → 5000
+├── telemetry
+│   └── + {"provider":"opentelemetry","sample_rate":0.25}
+└── version
+    └── ~ 1 → 2

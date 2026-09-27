@@ -1,0 +1,26 @@
+JSON DIFF
+  deprecated_field
+    - "legacy"
+  endpoints[1].auth_required
+    ~ type: boolean → string
+    - true
+    + "yes"
+  endpoints[2]
+    + {
+      "auth_required": true,
+      "method": "GET",
+      "path": "/api/v2/metrics"
+    }
+  rate_limit
+    - 1000
+    + 5000
+  telemetry
+    + {
+      "provider": "opentelemetry",
+      "sample_rate": 0.25
+    }
+  version
+    - 1
+    + 2
+
+Summary: 6 total changes (2 added, 1 removed, 2 modified, 1 type changed)
