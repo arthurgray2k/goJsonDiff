@@ -1,0 +1,19 @@
+{
+  "name": "ServiceGateway",
+  "version": 1,
+  "enabled": true,
+  "endpoints": [
+    {
+      "path": "/api/v1/health",
+      "method": "GET",
+      "auth_required": false
+    },
+    {
+      "path": "/api/v1/users",
+      "method": "GET",
+      "auth_required": true
+    }
+  ],
+  "rate_limit": 1000,
+  "deprecated_field": "legacy"
+}

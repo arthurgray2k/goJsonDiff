@@ -1,0 +1,27 @@
+{
+  "name": "ServiceGateway",
+  "version": 2,
+  "enabled": true,
+  "endpoints": [
+    {
+      "path": "/api/v1/health",
+      "method": "GET",
+      "auth_required": false
+    },
+    {
+      "path": "/api/v1/users",
+      "method": "GET",
+      "auth_required": "yes"
+    },
+    {
+      "path": "/api/v2/metrics",
+      "method": "GET",
+      "auth_required": true
+    }
+  ],
+  "rate_limit": 5000,
+  "telemetry": {
+    "provider": "opentelemetry",
+    "sample_rate": 0.25
+  }
+}
